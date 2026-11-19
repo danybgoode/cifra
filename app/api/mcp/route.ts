@@ -3,7 +3,7 @@ import { z } from "zod";
 import { changesSince, getDataset, listPublishers, searchDatasets } from "@/lib/ckan";
 import { check69B } from "@/lib/sat69b";
 import { STATES, normalizeState } from "@/lib/geo";
-import { banxicoSeries } from "@/lib/official";
+import { banxicoSeries, denueCercanos, inegiIndicador } from "@/lib/official";
 
 export const maxDuration = 60;
 
@@ -65,6 +65,25 @@ const handler = createMcpHandler((server) => {
       hasta: z.string().optional().describe("YYYY-MM-DD"),
     }),
   }, (a) => run(() => banxicoSeries(a.series, a.desde && a.hasta ? { desde: a.desde, hasta: a.hasta } : undefined)));
+
+  server.registerTool("denue_cercanos", {
+    title: "Negocios cerca de un punto (INEGI DENUE)",
+    description: "Establecimientos registrados en el DENUE de INEGI alrededor de una coordenada, con actividad, tamaño, dirección y contacto público.",
+    inputSchema: z.object({
+      lat: z.number(), lon: z.number(),
+      radio_m: z.number().int().min(1).max(5000).default(250),
+      termino: z.string().default("todos").describe("Palabra a buscar en el nombre, o 'todos'"),
+    }),
+  }, (a) => run(() => denueCercanos(a.lat, a.lon, a.radio_m, a.termino)));
+
+  server.registerTool("inegi_indicador", {
+    title: "Indicador de INEGI",
+    description: "Serie de un indicador del Banco de Indicadores de INEGI, p. ej. 1002000001 (población total, fuente BISE).",
+    inputSchema: z.object({
+      indicador: z.string(), area: z.string().default("00").describe("00 = nacional"),
+      fuente: z.enum(["BISE", "BIE"]).default("BISE"),
+    }),
+  }, (a) => run(() => inegiIndicador(a.indicador, a.area, a.fuente)));
 });
 
 export { handler as GET, handler as POST, handler as DELETE };
